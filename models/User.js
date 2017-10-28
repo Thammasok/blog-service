@@ -3,7 +3,7 @@ var bcrypt = require('bcrypt-nodejs');
 var bookshelf = require('../config/bookshelf');
 
 var User = bookshelf.Model.extend({
-  tableName: 'bof_users',
+  tableName: 'users',
   hasTimestamps: true,
 
   initialize: function() {

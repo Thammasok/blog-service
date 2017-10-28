@@ -62,3 +62,7 @@ migrations
 
 # package lock
 package-lock.json
+
+#example file
+routes/example
+controllers/example

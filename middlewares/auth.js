@@ -1,51 +1,43 @@
-var auth = function() {};
-
 var Authenticate = require('../models/Authenticate');
 
-var _ = auth.prototype;
-
-_.authenticateHeaderJson = authenticateHeaderJson;
-
-function authenticateHeaderJson (req, res, next){
   // Grab the "Authorization" header.
   // var auth = req.get("authorization");
-  var auth = req.headers.authorization;
+  var appToken = req.headers['application-token'];
   var contentType = req.headers['content-type'];
 
   if(contentType === 'application/json'){
-    if (!auth) {
-      // var authorizationHeader = new Buffer('NTRB:TzSuv8z9aNQgpdqd').toString('base64');
+    next();
+    // if (!appToken) {
+    //   return res.status(401).json({
+    //     msg: 'Application Token Required.'
+    //   });
+    // } else {
+    //   // Check authenticate validation
+    //   // var encoded = req.headers.authorization.split(' ')[1];
+    //   // var decoded = new Buffer(encoded, 'base64').toString('utf8');
 
-      return res.status(401).json({
-        msg: 'Authorization Required.'
-      });
-    } else {
-      // Check authenticate validation
-      // var encoded = req.headers.authorization.split(' ')[1];
-      // var decoded = new Buffer(encoded, 'base64').toString('utf8');
+    //   let decodedAppToken = new Buffer(appToken, 'base64').toString('utf8');
 
-      let decodedAuthorization = new Buffer(req.headers.authorization, 'base64').toString('utf8');
+    //   let shotName = decodedAppToken.split(':')[0];
+    //   let key = decodedAppToken.split(':')[1];
 
-      let shotName = decodedAuthorization.split(':')[0];
-      let key = decodedAuthorization.split(':')[1];
-
-      Authenticate.where({
-        auth_shot_name: shotName,
-        auth_key: key
-      }).fetch().then(function(authInfo) {
-        if(authInfo === null){
-          return res.status(401).json({
-            msg: "Authenticate not found."
-          });
-        }else{
-            next();
-        }
-      }).catch(function(err) {
-        return res.status(401).json({
-          msg: err
-        });
-      });
-    }
+    //   Authenticate.where({
+    //     auth_shot_name: shotName,
+    //     auth_key: key
+    //   }).fetch().then(function(appTokenInfo) {
+    //     if(appTokenInfo === null){
+    //       return res.status(401).json({
+    //         msg: "Application Token not found."
+    //       });
+    //     }else{
+    //         next();
+    //     }
+    //   }).catch(function(err) {
+    //     return res.status(401).json({
+    //       msg: err
+    //     });
+    //   });
+    // }
   }else{
     return res.status(401).json({
       msg: 'Content-Type incorrect.'
@@ -53,6 +45,4 @@ function authenticateHeaderJson (req, res, next){
   }
 
 
-}
-
-module.exports = new auth();
+};

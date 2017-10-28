@@ -1,9 +1,21 @@
-var async = require('async');
-var crypto = require('crypto');
-var nodemailer = require('nodemailer');
-var passport = require('passport');
-var knex = require('knex');
-var User = require('../models/User');
+const async = require('async');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
+const moment = require('moment');
+const passport = require('passport');
+const knex = require('knex');
+const User = require('../models/User');
+
+function generateToken(user) {
+  var payload = {
+    iss: 'localhost',
+    sub: user.id,
+    iat: moment().unix(),
+    exp: moment().add(7, 'days').unix()
+  };
+  return jwt.sign(payload, process.env.TOKEN_SECRET);
+}
 
 /**
  * Login required middleware
@@ -16,61 +28,9 @@ exports.ensureAuthenticated = function(req, res, next) {
   }
 };
 
-/**
- * POST /login
- */
-exports.loginPost = function(req, res, next) {
-  req.assert('username', 'Username cannot be empty').notEmpty();
-  req.assert('password', 'Password cannot be blank').notEmpty();
-
-  var errors = req.validationErrors();
-
-  if (errors) {
-    // req.flash('error', errors);
-    // return res.redirect('/login');
-    return res.status(403).json({ 
-      error: 'validate',
-      info: errors 
-    });
-  }
-
-  passport.authenticate('local', function(err, user, info) {
-    if (!user) {
-      // req.flash('error', info);
-      // return res.redirect('/login')
-      return res.status(403).json({ 
-        errors: 'cannot login',
-        info: info.msg 
-      });
-    } else {
-      req.logIn(user, function (err) {
-        // res.redirect('/');
-        res.status(200).json({
-          user
-        });
-      });
-    }
-  })(req, res, next);
-};
-
-/**
- * GET /logout
- */
-exports.logout = function(req, res) {
-  req.logout();
-  res.redirect('/login');
-  // res.status(200).json({
-  //   msg: 'Logout is success'
-  // });
-};
-
-/**
- * POST /register
- */
 exports.register = function(req, res, next) {
-  req.assert('displayname', 'Displayname cannot be empty').notEmpty();
+  req.assert('name', 'Name cannot be empty').notEmpty();
   req.assert('email', 'Email is not valid').isEmail();
-  req.assert('username', 'Username cannot be empty').notEmpty();
   req.assert('password', 'Password cannot be empty').notEmpty();
   req.assert('password', 'Password must be at least 8 characters long').isLength({ min: 8 });
   req.sanitize('email').normalizeEmail({ remove_dots: false });
@@ -82,9 +42,8 @@ exports.register = function(req, res, next) {
   }
 
   new User({
-    displayname: req.body.displayname,
+    name: req.body.name,
     email: req.body.email,
-    username: req.body.username,
     password: req.body.password
   }).save()
     .then(function(user) {
@@ -95,85 +54,59 @@ exports.register = function(req, res, next) {
     .catch(function(err) {
       if (err.code === 'ER_DUP_ENTRY' || err.code === '23505') {
         return res.status(403).json({
-          msg: 'The username or email address you have entered is already associated with another account.' 
+          msg: 'The username or email address you have entered is already associated with another account.'
         });
       }
     });
 };
 
-/**
- * POST /list
- */
-exports.userList = function (req, res, next) {
-  req.assert('status', 'Status is Not in condition.').isIn(['all', 'waiting', 'allow', 'close']);
+exports.login = function(req, res, next) {
+  req.assert('email', 'Email is not valid').isEmail();
+  req.assert('email', 'Email cannot be blank').notEmpty();
+  req.assert('password', 'Password cannot be blank').notEmpty();
+  req.sanitize('email').normalizeEmail({ remove_dots: false });
 
   var errors = req.validationErrors();
 
   if (errors) {
-    return res.status(400).json(errors);
+    return res.status(400).json(
+      errors
+    );
   }
 
-  if(req.body.status === 'all') {
-    new User().orderBy('id', 'DESC').fetchAll().then(function (user) {
-      return res.status(200).json({
-        user
+  new User({ email: req.body.email })
+    .fetch()
+    .then(function(user) {
+      if (!user) {
+        return res.status(401).json({ 
+          msg: 'The email address ' + req.body.email + ' is not associated with any account. ' +
+        'Double-check your email address and try again.'
+        });
+      }
+      user.comparePassword(req.body.password, function(err, isMatch) {
+        if (!isMatch) {
+          return res.status(401).json({ 
+            msg: 'Invalid email or password' 
+          });
+        }
+        
+        return res.status(401).json({ 
+          token: generateToken(user), 
+          user: user.toJSON() 
+        });
       });
-    })
-    .catch(function (err) {
-      return res.status(403).json(
-        err
-      );
     });
-  } else {
-    new User().where('accountStatus', req.body.status).orderBy('id', 'DESC').fetchAll().then(function (user) {
-      return res.status(200).json({
-        user
-      });
-    })
-    .catch(function (err) {
-      return res.status(403).json(
-        err
-      );
-    });
-  }
-  
 };
 
 /**
- * POST /list
+ * GET /logout
  */
-exports.numberOfUser = function (req, res, next) {
-  req.assert('status', 'Status is Not in condition.').isIn(['all', 'waiting', 'allow', 'close']);
-
-  var errors = req.validationErrors();
-
-  if (errors) {
-    return res.status(400).json(errors);
-  }
-
-  if (req.body.status === 'all') {
-    new User().count().then(function (number) {
-      return res.status(200).json({
-        number
-      });
-    })
-    .catch(function (err) {
-      return res.status(403).json(
-        err
-      );
-    });
-  } else {
-    new User().where('accountStatus', req.body.status).count().then(function (number) {
-      return res.status(200).json({
-        number
-      });
-    })
-    .catch(function (err) {
-      return res.status(403).json(
-        err
-      );
-    });
-  }
+exports.logout = function(req, res) {
+  req.logout();
+  res.redirect('/login');
+  // res.status(200).json({
+  //   msg: 'Logout is success'
+  // });
 };
 
 /**
@@ -221,7 +154,7 @@ exports.numberOfUser = function (req, res, next) {
 //       req.flash('error', { msg: 'The email address you have entered is already associated with another account.' });
 //     }
 //   });
-// }; 
+// };
 
 
 /**
@@ -233,7 +166,7 @@ exports.numberOfUser = function (req, res, next) {
 //     req.flash('info', { msg: 'Your account has been permanently deleted.' });
 //     res.redirect('/');
 //   });
-// }; 
+// };
 
 
 /**
@@ -265,7 +198,7 @@ exports.numberOfUser = function (req, res, next) {
 //       res.redirect('/account');
 //       });
 //     });
-// }; 
+// };
 
 
 /**
@@ -386,4 +319,4 @@ exports.numberOfUser = function (req, res, next) {
 //       });
 //     }
 //   ]);
-// }; 
+// };

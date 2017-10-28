@@ -14,8 +14,8 @@ const dotenv = require('dotenv');
 // Load environment constiables from .env file
 dotenv.load();
 
-var routes = require('./routes/index');
-var user = require('./routes/v1/user');
+const routes = require('./routes/index');
+const user = require('./routes/v1/user');
 
 // Passport OAuth strategies
 require('./config/passport');
