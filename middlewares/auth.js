@@ -1,10 +1,8 @@
-var Authenticate = require('../models/Authenticate');
+const Authenticate = require('../models/Authenticate');
 
 exports.authenticateHeaderJson = function (req, res, next){
-  // Grab the "Authorization" header.
-  // var auth = req.get("authorization");
-  var appToken = req.headers['application-token'];
-  var contentType = req.headers['content-type'];
+  // let appToken = req.headers['application-token'];
+  let contentType = req.headers['content-type'];
 
   if(contentType === 'application/json'){
     next();

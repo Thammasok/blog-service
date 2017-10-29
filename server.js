@@ -1,24 +1,26 @@
-const express = require('express');
-const path = require('path');
-const logger = require('morgan');
-const compression = require('compression');
-const methodOverride = require('method-override');
-const session = require('express-session');
-const flash = require('express-flash');
-const bodyParser = require('body-parser');
-const expressValidator = require('express-validator');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const dotenv = require('dotenv');
+const express         = require('express');
+const path            = require('path');
+const logger          = require('morgan');
+const compression     = require('compression');
+const methodOverride  = require('method-override');
+const session         = require('express-session');
+const flash           = require('express-flash');
+const bodyParser      = require('body-parser');
+const expressValidator= require('express-validator');
+const passport        = require('passport');
+const LocalStrategy   = require('passport-local').Strategy;
+const dotenv          = require('dotenv');
 
 // Load environment constiables from .env file
 dotenv.load();
 
-const routes = require('./routes/index');
-const user = require('./routes/v1/user');
+const routes    = require('./routes/index');
+const user      = require('./routes/v1/user');
+const tag       = require('./routes/v1/tag');
+const category  = require('./routes/v1/category');
 
 // Passport OAuth strategies
-require('./config/passport');
+// require('./config/passport');
 
 const app = express();
 
@@ -55,6 +57,8 @@ app.use(function (req, res, next) {
 //Set Route
 app.use('/api', routes);
 app.use('/api/user', user);
+app.use('/api/tag', tag);
+app.use('/api/category', category);
 
 // Production error handler
 if (app.get('env') === 'production') {
